@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        position: relative;
+        height: 100vh;
+        width: 100vw;
+      }
+
+      .control-panel {
+        position: absolute;
+        z-index: 5;
+        bottom: 2rem;
+        right: 2rem;
+      }
+
+      .game-btn {
+        background: transparent;
+        border: none;
+        border: 3px solid white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        color: white;
+        text-transform: uppercase;
+        font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+          "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+        background: lightgray;
+        text-shadow: 0px 0px 5px black;
+      }
+    </style>
+    <title>SkyScraper Escape</title>
+  </head>
+  <body>
+    <canvas></canvas>
+    <div class="control-panel">
+      <button data-action="grow" class="game-btn">Build Ladder</button>
+    </div>
+
+    <script src="ladder.js"></script>
+    <script src="building.js"></script>
+    <script src="city.js"></script>
+    <script>
+      let gameBtn = document.querySelector(".game-btn");
+      let canvas = document.querySelector("canvas");
+      canvas.width = innerWidth;
+      canvas.height = innerHeight;
+      let ctx = canvas.getContext("2d");
+
+      let bgImg = new Image();
+      bgImg.src = "./citybg.avif";
+      let bgImgs = [];
+      let buildings = [];
+      let ladders = [];
+      let score = 0;
+      let buildingCount = 0;
+      let buildingsCrossedScore = 0;
+      let distanceTraveled = 0;
+      let refDistance = 0;
+      let offsetX = 0;
+      let nextTurn = true;
+      let reverseDistance = false;
+
+      bgImg.onload = () => {
+        generateBg(0, 3);
+        generateBuildings();
+        animateGame();
+      };
+
+      function generateBg(j, count) {
+        for (let i = j; i < count; i++) {
+          bgImgs.push(new City(bgImg, innerWidth * i));
+        }
+      }
+
+      function generateUI() {
+        ctx.fillStyle = "black";
+        ctx.font = "20px Arial";
+        ctx.fillText(`Score: ${score}`, 20, 50);
+        ctx.fillText(
+          `Buildings: ${buildingsCrossedScore}  Traveled: ${distanceTraveled} ft`,
+          20,
+          80
+        );
+      }
+
+      function animateBackground() {
+        bgImgs.forEach((img, idx) => {
+          img.draw();
+          img.update();
+          if (img.toDelete) {
+            bgImgs.splice(idx, 1);
+            generateBg(1, 2);
+            // console.log("new bg!");
+          }
+        });
+      }
+
+      function generateBuildings(x = 25) {
+        let posX = x;
+        while (posX < innerWidth + 1000) {
+          let buildingWidth = Math.floor(Math.random() * 45) + 50;
+          let buildingColor = `rgb(${((Math.random() * 5) | 0) + 5},${
+            ((Math.random() * 5) | 0) + 5
+          },${((Math.random() * 5) | 0) + 5})`;
+          buildings.push(new Building(posX, buildingWidth, buildingColor));
+          posX += ((Math.random() * 125) | 0) + 100;
+        }
+      }
+
+      function generateNewBuilding() {
+        let posX =
+          buildings[buildings.length - 1].x +
+          buildings[buildings.length - 1].width +
+          Math.floor(Math.random() * 100) +
+          25;
+        let buildingWidth = (Math.random() * 65) | (0 + 30);
+        let buildingColor = `rgb(${((Math.random() * 5) | 0) + 5},${
+          ((Math.random() * 5) | 0) + 5
+        },${((Math.random() * 5) | 0) + 5})`;
+        buildings.push(new Building(posX, buildingWidth, buildingColor));
+        // console.log("generate new building");
+      }
+
+      function moveBuildings(offset) {
+        buildings.forEach((building) => {
+          building.offsetX = offset;
+        });
+      }
+
+      function moveLadders(offset) {
+        ladders.forEach((ladder) => {
+          ladder.offsetX = offset;
+        });
+      }
+
+      function determineSuccess() {
+        let ladderSize = ladders[ladders.length - 1].size;
+        let buildingsCrossed = determineBuildingsCrossed(ladderSize);
+        let initialLadderX = ladders[ladders.length - 1].x;
+        if (initialLadderX + ladderSize >= buildings[buildingsCrossed].x) {
+          console.log("success");
+          let offsetLength = ladderSize;
+          if (buildings[buildingsCrossed].x - offsetLength > 75) {
+            // offsetLength += 150;
+            // console.log(
+            //   "Next Users X Position:",
+            //   buildings[buildingsCrossed].x - offsetLength
+            // );
+            let difference = buildings[buildingsCrossed].x - offsetLength - 75;
+            offsetLength += difference;
+            // console.log("adding offset length!");
+          }
+          moveBuildings(offsetLength);
+          moveLadders(offsetLength);
+          handleSuccess(ladderSize, buildingsCrossed);
+        } else {
+          console.log("Player died");
+          score = "GAME OVER";
+          reverseDistance = true;
+          rewindLaddersAndBuildings(distanceTraveled);
+          if (distanceTraveled == 0) handleGameOver();
+        }
+
+        nextTurn = true;
+      }
+
+      function determineBuildingsCrossed(ladderSize) {
+        let initialX =
+          buildings[buildingCount].x + buildings[buildingCount].width;
+        let initialCount = buildingCount;
+        for (let i = buildingCount; i < buildings.length; i++) {
+          if (
+            initialX + ladderSize > buildings[i].x &&
+            initialX + ladderSize > buildings[i].x + buildings[i].width
+          ) {
+            initialCount++;
+          }
+        }
+        console.log("buildings crossed: " + initialCount);
+        return initialCount;
+      }
+
+      function handleSuccess(ladderSize, buildingsCrossed) {
+        for (let i = buildingCount; i < buildingsCrossed; i++) {
+          buildings[buildingCount].isSuccess = true;
+          buildingCount++;
+          buildingsCrossedScore++;
+          let moveScore = 100;
+          score += ladderSize + moveScore;
+        }
+        distanceTraveled += ladderSize + buildings[buildingCount].width;
+
+        refDistance = distanceTraveled;
+      }
+
+      function handleGameOver() {
+        setTimeout(() => {
+          score = 0;
+          buildingCount = 0;
+          buildingsCrossedScore = 0;
+          distanceTraveled = 0;
+          refDistance = 0;
+          buildings = [];
+          ladders = [];
+          generateBuildings();
+        }, 2000);
+      }
+
+      function rewindLaddersAndBuildings(distanceTraveled) {
+        // console.log("RewindDistance", distanceTraveled);
+        ladders.forEach((ladder) => {
+          // console.log("assigning ladders rewindDistance", distanceTraveled);
+          ladder.rewindDistance = distanceTraveled;
+        });
+        buildings.forEach((building) => {
+          building.rewindDistance = distanceTraveled;
+        });
+      }
+
+      function checkForGameOver() {
+        if (reverseDistance) {
+          refDistance -= ladders[0].rewindVel;
+          if (refDistance <= 0) {
+            handleGameOver();
+            reverseDistance = false;
+          }
+        }
+      }
+
+      function animateGame() {
+        animateBackground();
+        generateUI();
+        checkForGameOver();
+        buildings.forEach((building, idx) => {
+          building.draw();
+          building.update();
+          if (building.offScreen) {
+            if (!building.hasSpawned) {
+              generateNewBuilding();
+              building.hasSpawned = true;
+              // console.log("spawn building!");
+            }
+          }
+        });
+
+        ladders.forEach((ladder) => {
+          ladder.draw();
+          ladder.update();
+          if (ladder.hasFallen) {
+            if (!ladder.isScored) {
+              determineSuccess();
+              ladder.isScored = true;
+            }
+          }
+        });
+
+        requestAnimationFrame(animateGame);
+      }
+
+      // onmousedown = () => {
+      //   if (nextTurn) {
+      //     let ladderX =
+      //       buildings[buildingCount].x + buildings[buildingCount].width;
+      //     let ladderY = innerHeight - buildings[buildingCount].height + 7.5;
+      //     ladders.push(new Ladder(ladderX, ladderY));
+      //     console.log("grow ladder!");
+      //     nextTurn = false;
+      //   }
+      // };
+
+      // onmouseup = () => {
+      //   ladders[ladders.length - 1].isGrowing = false;
+      //   buildingCount++;
+      // };
+
+      let debounce;
+      onresize = () => {
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(() => {
+          canvas.width = innerWidth;
+          canvas.height = innerHeight;
+          buildings = [];
+          generateBuildings();
+        }, 2000);
+      };
+
+      gameBtn.onclick = () => {
+        let btnAction = gameBtn.getAttribute("data-action");
+
+        switch (btnAction) {
+          case "grow":
+            if (nextTurn) {
+              let ladderX =
+                buildings[buildingCount].x + buildings[buildingCount].width;
+              let ladderY = innerHeight - buildings[buildingCount].height + 7.5;
+              ladders.push(new Ladder(ladderX, ladderY));
+              nextTurn = false;
+              gameBtn.setAttribute("data-action", "stop");
+              gameBtn.textContent = "Stop Ladder";
+            }
+            break;
+
+          case "stop":
+            // console.log("stop ladder!");
+            gameBtn.setAttribute("data-action", "grow");
+            gameBtn.textContent = "Build Ladder";
+            ladders[ladders.length - 1].isGrowing = false;
+            // buildingCount++;
+            break;
+        }
+      };
+    </script>
+  </body>
+</html>
