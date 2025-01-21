@@ -72,6 +72,13 @@
         outline: none;
         padding: 0.5rem 2rem;
         cursor: pointer;
+        border: none;
+        transition: 0.25s ease;
+        box-shadow: 0px -5px 10px black inset;
+      }
+
+      .play-btn:hover {
+        box-shadow: 0px -2px 10px black inset;
       }
 
       .game-info-card {
@@ -189,9 +196,11 @@
       let distanceTraveled = 0;
       let refDistance = 0;
       let offsetX = 0;
+      let globalPointsAwarded = 0;
       let nextTurn = true;
       let reverseDistance = false;
       let distanceFromEdgeGlobal = -1;
+      let buildingsCrossedGlobal = -1;
 
       bgImg.onload = () => {
         generateBg(0, 3);
@@ -263,15 +272,39 @@
         });
       }
 
-      function generateCaption(feetFromEdge) {
+      function generateCaption(feetFromEdge, ladderSize) {
         if (feetFromEdge >= 0) {
           ctx.fillStyle = "black";
           ctx.font = "20px Arial";
+          let possibleScore = buildingsCrossedGlobal * 100;
+          ctx.fillText(
+            `${buildingsCrossedGlobal} building(s) crossed! x ${possibleScore}`,
+            innerWidth / 2 - 100,
+            innerHeight / 2 - 30
+          );
           ctx.fillText(
             `Feet from the edge: ${feetFromEdge}ft`,
             innerWidth / 2 - 75,
             innerHeight / 2
           );
+          let percent = (100 - feetFromEdge) / 100;
+          let pointsAwarded = Math.floor(possibleScore * percent);
+          console.log("Percent", percent);
+          globalPointsAwarded = pointsAwarded;
+          ctx.fillText(
+            `Points Awared: ${pointsAwarded}`,
+            innerWidth / 2 - 75,
+            innerHeight / 2 + 25
+          );
+        } else {
+          // ctx.clearRect(
+          //   innerWidth / 2 - 250,
+          //   innerHeight / 2 - 150,
+          //   innerWidth / 2 + 200,
+          //   innerHeight / 2 - 200
+          // );
+          ctx.font = "100px Arial";
+          ctx.fillText("", innerWidth / 2 - 250, innerHeight / 2 - 150);
         }
       }
 
@@ -302,6 +335,7 @@
           handleSuccess(ladderSize, buildingsCrossed, distanceFromEdge);
         } else {
           console.log("Player died");
+          distanceFromEdgeGlobal = -1;
           score = "GAME OVER";
           reverseDistance = true;
           rewindLaddersAndBuildings(distanceTraveled);
@@ -324,6 +358,7 @@
           }
         }
         console.log("buildings crossed: " + initialCount);
+        buildingsCrossedGlobal = initialCount - buildingCount;
         return initialCount;
       }
 
@@ -337,11 +372,11 @@
         }
         console.log("DistanceFromEdge", distanceFromEdge);
         let percent = (1 - distanceFromEdge / 100).toFixed(2);
-        console.log("Percent: " + percent + "%");
-        totalPoints += distanceTraveled;
-        totalPoints *= percent;
-        score += totalPoints;
-
+        // console.log("Percent: " + percent + "%");
+        // totalPoints += distanceTraveled;
+        // totalPoints *= percent;
+        score += globalPointsAwarded;
+        distanceTraveled += ladderSize;
         refDistance = distanceTraveled;
       }
 
@@ -351,11 +386,14 @@
           buildingCount = 0;
           buildingsCrossedScore = 0;
           distanceTraveled = 0;
+          buildingsCrossedGlobal = -1;
+          distanceFromEdgeGlobal = -1;
+          globalPointsAwarded = 0;
           refDistance = 0;
           buildings = [];
           ladders = [];
           generateBuildings();
-        }, 2000);
+        }, 3250);
       }
 
       function rewindLaddersAndBuildings(distanceTraveled) {
@@ -410,22 +448,6 @@
 
         requestAnimationFrame(animateGame);
       }
-
-      // onmousedown = () => {
-      //   if (nextTurn) {
-      //     let ladderX =
-      //       buildings[buildingCount].x + buildings[buildingCount].width;
-      //     let ladderY = innerHeight - buildings[buildingCount].height + 7.5;
-      //     ladders.push(new Ladder(ladderX, ladderY));
-      //     console.log("grow ladder!");
-      //     nextTurn = false;
-      //   }
-      // };
-
-      // onmouseup = () => {
-      //   ladders[ladders.length - 1].isGrowing = false;
-      //   buildingCount++;
-      // };
 
       let debounce;
       onresize = () => {
