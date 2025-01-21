@@ -4,7 +4,15 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <style>
+      @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap");
       * {
         margin: 0;
         padding: 0;
@@ -19,6 +27,10 @@
 
       body {
         overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Roboto", serif;
       }
 
       canvas {
@@ -44,12 +56,113 @@
           "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
         background: lightgray;
         text-shadow: 0px 0px 5px black;
+        filter: blur(100px);
+        pointer-events: none;
+      }
+
+      .fade-in-game-btn {
+        transition: 1s ease;
+        filter: blur(0px);
+        pointer-events: all;
+      }
+
+      .play-btn {
+        background: rgb(25, 155, 20);
+        border-radius: 2rem;
+        outline: none;
+        padding: 0.5rem 2rem;
+        cursor: pointer;
+      }
+
+      .game-info-card {
+        position: absolute;
+        z-index: 5;
+        text-align: center;
+        background: linear-gradient(black, gray);
+        padding: 2rem;
+        border-radius: 0.5rem;
+        color: white;
+        width: clamp(50%, 450px, 85%);
+        animation: dropdown 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        transform: translateY(-50rem);
+      }
+
+      @keyframes dropdown {
+        100% {
+          transform: translateY(0);
+        }
+      }
+
+      .hide-gamecard {
+        animation: hide-gamecard 1.5s forwards;
+      }
+
+      @keyframes hide-gamecard {
+        50% {
+          filter: blur(100px);
+        }
+        100% {
+          filter: blur(100px);
+          display: none;
+        }
+      }
+
+      h1 {
+        /* font-weight: 200; */
+        font-size: 4rem;
+      }
+
+      .thin {
+        font-weight: 200;
+        font-size: 2.75rem;
+      }
+
+      p {
+        margin: 2rem 3rem;
+      }
+
+      .graphics-row {
+        display: flex;
+        justify-content: space-between;
+        width: 175px;
+        margin: 0 auto;
+        position: relative;
+      }
+
+      .graphics-row::after {
+        content: "";
+        position: absolute;
+        width: 65%;
+        height: 3px;
+        left: 17.5%;
+        top: 0.5rem;
+        background: black;
+      }
+
+      .building-h3 {
+        font-size: 3rem;
       }
     </style>
     <title>SkyScraper Escape</title>
   </head>
   <body>
     <canvas></canvas>
+    <div class="game-info-card">
+      <h1>S<span class="thin">kyscraper</span></h1>
+      <h1>G<span class="thin">etAway</span></h1>
+      <div class="graphics-row">
+        <h3 class="building-h3">🏢</h3>
+        <h3></h3>
+        <h3 class="building-h3">🏢</h3>
+      </div>
+      <p>
+        Build ladders long enough to cross the cities tallest skyscrapers The
+        more buildings crossed per ladder, the sweeter the reward!
+      </p>
+      <button class="play-btn">
+        <i class="fas fa-play"></i>
+      </button>
+    </div>
     <div class="control-panel">
       <button data-action="grow" class="game-btn">Build Ladder</button>
     </div>
@@ -58,6 +171,7 @@
     <script src="building.js"></script>
     <script src="city.js"></script>
     <script>
+      let playBtn = document.querySelector(".play-btn");
       let gameBtn = document.querySelector(".game-btn");
       let canvas = document.querySelector("canvas");
       canvas.width = innerWidth;
@@ -92,13 +206,10 @@
 
       function generateUI() {
         ctx.fillStyle = "black";
-        ctx.font = "20px Arial";
-        ctx.fillText(`Score: ${score}`, 20, 50);
-        ctx.fillText(
-          `Buildings: ${buildingsCrossedScore}  Traveled: ${distanceTraveled} ft`,
-          20,
-          80
-        );
+        ctx.font = "16px Arial";
+        ctx.fillText(`Score: ${score}`, 20, 30);
+        ctx.fillText(`Buildings: ${buildingsCrossedScore}`, 20, 50);
+        ctx.fillText(`Traveled: ${distanceTraveled} ft`, 20, 70);
       }
 
       function animateBackground() {
@@ -326,6 +437,13 @@
             // buildingCount++;
             break;
         }
+      };
+
+      playBtn.onclick = () => {
+        document
+          .querySelector(".game-info-card")
+          .classList.add("hide-gamecard");
+        gameBtn.classList.add("fade-in-game-btn");
       };
     </script>
   </body>
