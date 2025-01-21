@@ -191,6 +191,7 @@
       let offsetX = 0;
       let nextTurn = true;
       let reverseDistance = false;
+      let distanceFromEdgeGlobal = -1;
 
       bgImg.onload = () => {
         generateBg(0, 3);
@@ -262,26 +263,43 @@
         });
       }
 
+      function generateCaption(feetFromEdge) {
+        if (feetFromEdge >= 0) {
+          ctx.fillStyle = "black";
+          ctx.font = "20px Arial";
+          ctx.fillText(
+            `Feet from the edge: ${feetFromEdge}ft`,
+            innerWidth / 2 - 75,
+            innerHeight / 2
+          );
+        }
+      }
+
+      function determineDistanceFromEdge(buildingX, ladderEndX) {
+        return Math.abs(buildingX - ladderEndX);
+      }
+
       function determineSuccess() {
         let ladderSize = ladders[ladders.length - 1].size;
+        let initialLadderX =
+          buildings[buildingCount].x + buildings[buildingCount].width;
         let buildingsCrossed = determineBuildingsCrossed(ladderSize);
-        let initialLadderX = ladders[ladders.length - 1].x;
         if (initialLadderX + ladderSize >= buildings[buildingsCrossed].x) {
-          console.log("success");
+          let distanceFromEdge = determineDistanceFromEdge(
+            buildings[buildingsCrossed].x,
+            initialLadderX + ladderSize
+          );
+          distanceFromEdgeGlobal = distanceFromEdge;
+          // console.log("success");
+          // console.log("DistanceFromEdge", distanceFromEdge);
           let offsetLength = ladderSize;
           if (buildings[buildingsCrossed].x - offsetLength > 75) {
-            // offsetLength += 150;
-            // console.log(
-            //   "Next Users X Position:",
-            //   buildings[buildingsCrossed].x - offsetLength
-            // );
             let difference = buildings[buildingsCrossed].x - offsetLength - 75;
             offsetLength += difference;
-            // console.log("adding offset length!");
           }
           moveBuildings(offsetLength);
           moveLadders(offsetLength);
-          handleSuccess(ladderSize, buildingsCrossed);
+          handleSuccess(ladderSize, buildingsCrossed, distanceFromEdge);
         } else {
           console.log("Player died");
           score = "GAME OVER";
@@ -309,15 +327,20 @@
         return initialCount;
       }
 
-      function handleSuccess(ladderSize, buildingsCrossed) {
+      function handleSuccess(ladderSize, buildingsCrossed, distanceFromEdge) {
+        let totalPoints = 100;
         for (let i = buildingCount; i < buildingsCrossed; i++) {
           buildings[buildingCount].isSuccess = true;
           buildingCount++;
           buildingsCrossedScore++;
-          let moveScore = 100;
-          score += ladderSize + moveScore;
+          totalPoints *= 2;
         }
-        distanceTraveled += ladderSize + buildings[buildingCount].width;
+        console.log("DistanceFromEdge", distanceFromEdge);
+        let percent = (1 - distanceFromEdge / 100).toFixed(2);
+        console.log("Percent: " + percent + "%");
+        totalPoints += distanceTraveled;
+        totalPoints *= percent;
+        score += totalPoints;
 
         refDistance = distanceTraveled;
       }
@@ -371,6 +394,8 @@
             }
           }
         });
+
+        generateCaption(distanceFromEdgeGlobal);
 
         ladders.forEach((ladder) => {
           ladder.draw();
